@@ -44,6 +44,31 @@ Normal tests skip live checks. Report blocked checks explicitly. Source resoluti
 does not prove rendered video, audible sound, subtitles, or completed downloads.
 A package build does not prove an integrating app or another platform builds.
 
-When publishing a new version, use a semantic-version tag. Update AniMac's remote
-package requirement/Package.resolved and verify its build against the published
-revision. Never require consumers to reference a checkout-specific absolute path.
+## Publishing and updating AniMac
+
+The provider update workflow lives in this repository. AniMac's AGENTS.md links
+here rather than maintaining a second copy of the instructions.
+
+1. Inspect git status in this checkout and in AniMac (normally `../AniMac`). Preserve unrelated changes in both repositories.
+2. Complete the ani-cli comparison and regression/live checks above. Preserve public API and persisted Show/Translation encodings where practical. Check all consumers: AVPlayer, mpv, and FFmpeg, including playback headers and master-playlist audio groups.
+3. Verify and publish the package change with a semantic-version tag.
+4. Update AniMac's remote package requirement if needed, resolve the dependency, and verify both its project and workspace Package.resolved files pin the intended tag's revision.
+5. Build AniMac against the published revision. Leave its dependency graph referencing the remote package, without an absolute checkout path or local package override.
+6. Review both diffs and report exactly what was verified. Package tests and source resolution alone do not establish rendered video, audible sound, subtitles, or completed downloads.
+
+From the AniMac checkout, verify the published integration with:
+
+```sh
+xcodebuild -workspace AniMacWorkspace.xcworkspace -scheme AniMac \
+  -destination 'platform=macOS' -derivedDataPath /tmp/animac-build \
+  CODE_SIGNING_ALLOWED=NO build
+xcodebuild -resolvePackageDependencies -project AniMac.xcodeproj \
+  -scheme AniMac -clonedSourcePackagesDirPath /tmp/animac-build/SourcePackages
+git diff --check
+```
+
+Network access is needed for remote package resolution. A macOS build does not
+establish device or other-platform validation. AniMac's optional
+`Tests/run-provider-tests.sh [--live]` delegates to this checkout; set ANIDBKIT_PATH
+if it is not at `../AniDBKit` relative to AniMac. To test the exact app dependency,
+use the package revision pinned by AniMac rather than an unrelated newer branch.
